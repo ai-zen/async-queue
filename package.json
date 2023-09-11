@@ -13,12 +13,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lzqcn/async-queue.git"
+    "url": "git+https://github.com/ai-zen/async-queue.git"
   },
   "bugs": {
-    "url": "https://github.com/lzqcn/async-queue/issues"
+    "url": "https://github.com/ai-zen/async-queue/issues"
   },
-  "homepage": "https://github.com/lzqcn/async-queue",
+  "homepage": "https://github.com/ai-zen/async-queue",
   "devDependencies": {
     "typescript": "^5.2.2"
   }
