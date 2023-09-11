@@ -7,19 +7,19 @@
 使用 npm：
 
 ```
-npm install async-queue
+npm install @ai-zen/async-queue
 ```
 
 使用 yarn：
 
 ```
-yarn add async-queue
+yarn add @ai-zen/async-queue
 ```
 
 ## 使用示例
 
 ```typescript
-import AsyncQueue from "async-queue";
+import AsyncQueue from "@ai-zen/async-queue";
 
 // 创建一个 AsyncQueue 实例
 const queue = new AsyncQueue<number>();

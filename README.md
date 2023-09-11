@@ -7,19 +7,19 @@
 Using npm:
 
 ```
-npm install async-queue
+npm install @ai-zen/async-queue
 ```
 
 Using yarn:
 
 ```
-yarn add async-queue
+yarn add @ai-zen/async-queue
 ```
 
 ## Usage
 
 ```typescript
-import AsyncQueue from "async-queue";
+import AsyncQueue from "@ai-zen/async-queue";
 
 // Create an instance of AsyncQueue
 const queue = new AsyncQueue<number>();
