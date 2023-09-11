@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/lzqcn/async-queue/issues"
   },
-  "homepage": "https://github.com/lzqcn/async-queue"
+  "homepage": "https://github.com/lzqcn/async-queue",
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
 }
