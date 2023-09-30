@@ -72,7 +72,6 @@ async function processQueue() {
     }
   } catch (error) {
     console.error("Error processing queue:", error);
-  } finally {
     queue.done();
   }
 }
