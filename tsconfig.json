@@ -4,11 +4,7 @@
     "moduleResolution": "Node",
     "target": "ESNext",
     "sourceMap": true,
-    "strict": false,
-    "noImplicitAny": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "strictNullChecks": true,
+    "strict": true,
     "declaration": true,
     "rootDir": "./src",
     "outDir": "./dist"
