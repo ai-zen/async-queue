@@ -1,84 +1,137 @@
 # AsyncQueue
 
-`AsyncQueue` 是一个异步队列类，它允许你按顺序异步处理数据。它实现了 `Symbol.asyncIterator` 接口，因此可以在 `for-await-of` 循环中使用。
+AsyncQueue 是一个提供简单异步队列实现的 TypeScript 类。它实现了`Symbol.asyncIterator`接口，因此可以在`for-await-of`循环中使用。它允许将项目推入队列，并使用异步迭代器由一个或多个消费者消耗。
 
 ## 安装
-
-使用 npm：
 
 ```
 npm install @ai-zen/async-queue
 ```
 
-使用 yarn：
+## 使用
 
-```
-yarn add @ai-zen/async-queue
-```
+### 导入
 
-## 使用示例
-
-```typescript
+```javascript
 import AsyncQueue from "@ai-zen/async-queue";
+```
 
-// 创建一个 AsyncQueue 实例
-const queue = new AsyncQueue<number>();
+### 创建 AsyncQueue 实例
 
-// 将数据推入队列
-queue.push(1);
-queue.push(2);
-queue.push(3);
+```javascript
+const queue = new AsyncQueue();
+```
 
-// 在 for-await-of 循环中处理数据
-async function processQueue() {
-  for await (const value of queue) {
-    console.log(value);
-  }
-}
+### 推入值到队列中
 
-processQueue().catch((error) => {
-  console.error("Error processing queue:", error);
-});
+```javascript
+queue.push(value);
+```
 
-// 当队列处理完成后调用 done 方法
+`push`方法将一个值添加到队列中。它会增加队列的大小 1。
+
+### 将队列标记为完成
+
+```javascript
 queue.done();
 ```
 
-## API
+`done`方法将队列标记为完成。这意味着将不再向队列中推入任何项目。
 
-### `push(value: T): void`
+### 遍历队列
 
-将一个值推入队列。
-
-- `value` - 要推入队列的值。
-
-### `done(): void`
-
-表示队列处理完成，不再有新的值推入。
-
-### `size: number`
-
-获取当前队列中的值数量。
-
-## 异常处理
-
-如果在处理队列时发生错误，可以使用 `try-catch` 块来捕获异常。在捕获到异常后，可以调用 `done` 方法来表示队列处理完成，以确保不再有新的值推入。
-
-```typescript
-async function processQueue() {
-  try {
-    for await (const value of queue) {
-      // 处理数据
-    }
-  } catch (error) {
-    console.error("Error processing queue:", error);
-    queue.done();
-  }
+```javascript
+for await (const value of queue) {
+  // 消费值
 }
 ```
 
-请确保在处理队列时始终处理异常，以免导致队列无法正常完成。
+`for await...of`循环可以用来遍历队列中的项目。这个循环是异步的，这意味着它将在使用每个值之前等待其可用。
 
-## 版权信息
+### 获取队列的大小
 
-MIT License
+```javascript
+const size = queue.size;
+```
+
+`size`属性返回队列的当前大小。
+
+## 示例
+
+### 示例 1：单个消费者
+
+```javascript
+const queue = new AsyncQueue<number>();
+const values = [1, 2, 3, 4, 5];
+const result: number[] = [];
+
+const promise1 = (async () => {
+  for (const value of values) {
+    await sleep(1000); // Assuming to do something asynchronous
+    queue.push(value);
+  }
+  queue.done();
+})();
+
+const promise2 = (async () => {
+  for await (const value of queue) {
+    await sleep(1000); // Assuming to do something asynchronous
+    result.push(value);
+  }
+})();
+
+await Promise.all([promise1, promise2]);
+```
+
+输出：
+
+```
+1
+2
+3
+4
+5
+```
+
+### 示例 2：多个消费者
+
+这对于限制并发请求的数量非常有用，就像一个简单的线程池一样。
+
+```javascript
+const queue = new AsyncQueue<number>();
+const values = [1, 2, 3, 4, 5];
+const result: number[] = [];
+
+const promise1 = (async () => {
+  for (const value of values) {
+    await sleep(1000); // Assuming to do something asynchronous
+    queue.push(value);
+  }
+  queue.done();
+})();
+
+const promise2 = Promise.all(
+  Array.from({ length: 3 }).map(async () => {
+    for await (const value of queue) {
+      await sleep(1000); // Assuming to do something asynchronous
+      result.push(value);
+    }
+  })
+);
+
+await Promise.all([promise1, promise2]);
+```
+
+输出：
+
+```
+1
+2
+3
+4
+5
+```
+
+## 许可证
+
+该软件包根据 MIT 许可证进行许可。
