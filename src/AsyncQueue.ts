@@ -1,29 +1,32 @@
 export default class AsyncQueue<T> {
-  private dataQueue: (
-    | { value: T; done: false }
-    | { value: null; done: true }
-  )[] = [];
-  private resolveQueue: ((value: void | PromiseLike<void>) => void)[] = [];
+  private dataQueue: T[] = [];
+  private resolve?: () => void = undefined;
+  private promise?: Promise<unknown> = new Promise<void>(
+    (resolve) => (this.resolve = resolve)
+  );
+  isDone: boolean = false;
 
   public async *[Symbol.asyncIterator]() {
     while (true) {
-      while (this.dataQueue.length === 0) {
-        await new Promise((resolve) => this.resolveQueue.push(resolve));
+      if (this.dataQueue.length) {
+        yield this.dataQueue.shift()!;
+      } else if (this.isDone) {
+        break;
+      } else {
+        await this.promise;
       }
-      const data = this.dataQueue.shift()!;
-      if (data.done) break;
-      yield data.value;
     }
   }
 
   public push(value: T) {
-    this.dataQueue.push({ value, done: false });
-    this.resolveQueue.shift()?.();
+    this.dataQueue.push(value);
+    this.resolve?.();
+    this.promise = new Promise<void>((resolve) => (this.resolve = resolve));
   }
 
   public done() {
-    this.dataQueue.push({ value: null, done: true });
-    this.resolveQueue.shift()?.();
+    this.isDone = true;
+    this.resolve?.();
   }
 
   public get size() {
