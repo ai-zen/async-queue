@@ -1,6 +1,6 @@
 {
   "name": "@ai-zen/async-queue",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "`AsyncQueue` is a class for asynchronous queues that allows you to process data in order. It implements the `Symbol.asyncIterator` interface, so it can be used in `for-await-of` loops.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

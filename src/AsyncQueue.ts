@@ -1,15 +1,21 @@
 export default class AsyncQueue<T> {
-  private dataQueue: T[] = [];
+  private queue: T[] = [];
   private resolve?: () => void = undefined;
   private promise?: Promise<unknown> = new Promise<void>(
     (resolve) => (this.resolve = resolve)
   );
   isDone: boolean = false;
 
+  constructor(iterable?: Iterable<T> | null | undefined) {
+    if (iterable) {
+      this.queue.push(...iterable);
+    }
+  }
+
   public async *[Symbol.asyncIterator]() {
     while (true) {
-      if (this.dataQueue.length) {
-        yield this.dataQueue.shift()!;
+      if (this.queue.length) {
+        yield this.queue.shift()!;
       } else if (this.isDone) {
         break;
       } else {
@@ -18,8 +24,8 @@ export default class AsyncQueue<T> {
     }
   }
 
-  public push(value: T) {
-    this.dataQueue.push(value);
+  public push(...values: T[]) {
+    this.queue.push(...values);
     this.resolve?.();
     this.promise = new Promise<void>((resolve) => (this.resolve = resolve));
   }
@@ -30,6 +36,6 @@ export default class AsyncQueue<T> {
   }
 
   public get size() {
-    return this.dataQueue.length;
+    return this.queue.length;
   }
 }

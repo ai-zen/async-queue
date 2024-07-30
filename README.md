@@ -1,8 +1,10 @@
 # AsyncQueue
 
-AsyncQueue is a TypeScript class that provides a simple asynchronous queue implementation. It implements the `Symbol.asyncIterator` interface, so it can be used in `for-await-of` loops. It allows items to be pushed into the queue and consumed by one or multiple consumers using an async iterator.
+AsyncQueue is a TypeScript class that provides a simple asynchronous queue implementation. It implements the `Symbol.asyncIterator` interface, allowing it to be used in `for-await-of` loops. This enables one or multiple consumers to process items in the queue asynchronously.
 
 ## Installation
+
+Install AsyncQueue using npm:
 
 ```
 npm install @ai-zen/async-queue
@@ -12,45 +14,51 @@ npm install @ai-zen/async-queue
 
 ### Importing
 
-```javascript
+```typescript
 import AsyncQueue from "@ai-zen/async-queue";
 ```
 
-### Creating an AsyncQueue instance
+### Creating an AsyncQueue Instance
 
-```javascript
-const queue = new AsyncQueue();
+```typescript
+const queue = new AsyncQueue([1, 2, 3]);
 ```
 
-### Pushing values to the queue
+### Pushing Values to the Queue
 
-```javascript
+```typescript
 queue.push(value);
+
+// Or
+queue.push(value1, value2, value3, ...);
+
+// Or
+queue.push(...values);
 ```
 
-The `push` method adds a value to the queue. It increases the size of the queue by 1.
+The `push` method adds one or more values to the queue, and increases its size.
 
-### Marking the queue as done
+### Marking the Queue as Done
 
-```javascript
+```typescript
 queue.done();
 ```
 
-The `done` method marks the queue as done. This means that no more items will be pushed into the queue.
+The `done` method marks the queue as finished. This indicates that no more items will be added to the queue.
 
-### Iterating over the queue
+### Iterating Over the Queue
 
-```javascript
+```typescript
 for await (const value of queue) {
   // Consume the value
 }
 ```
 
-The `for await...of` loop can be used to iterate over the items in the queue. This loop is async, which means it will wait for each value to be available before consuming it.
+The `for await...of` loop can be used to iterate over the items in the queue. This loop is asynchronous and will wait for each value to be available before consuming it.
 
-### Getting the size of the queue
+### Getting the Size of the Queue
 
-```javascript
+```typescript
 const size = queue.size;
 ```
 
@@ -58,29 +66,27 @@ The `size` property returns the current size of the queue.
 
 ## Examples
 
-### Example 1: Single consumer
+### Example 1: Single Consumer
 
-```javascript
-const queue = new AsyncQueue<number>();
-const values = [1, 2, 3, 4, 5];
-const result: number[] = [];
+You can add data asynchronously while consuming data asynchronously.
 
-const promise1 = (async () => {
-  for (const value of values) {
-    await sleep(1000); // Assuming to do something asynchronous
+```typescript
+const queue = new AsyncQueue();
+
+(async () => {
+  for (const value of [1, 2, 3, 4, 5]) {
+    await sleep(1); // Simulate asynchronous operations
     queue.push(value);
   }
   queue.done();
 })();
 
-const promise2 = (async () => {
-  for await (const value of queue) {
-    await sleep(1000); // Assuming to do something asynchronous
-    result.push(value);
-  }
-})();
+for await (const value of queue) {
+  await sleep(1); // Simulate asynchronous operations
+  console.log(value);
+}
 
-await Promise.all([promise1, promise2]);
+console.log("Done!");
 ```
 
 Output:
@@ -91,45 +97,57 @@ Output:
 3
 4
 5
+Done!
 ```
 
-### Example 2: Multiple consumers
+### Example 2:
 
-This is very useful for limiting the number of concurrent requests, functioning as a simple thread pool.
+Easily convert traditional streams into asynchronous iterators.
 
-```javascript
-const queue = new AsyncQueue<number>();
-const values = [1, 2, 3, 4, 5];
-const result: number[] = [];
+```typescript
+const queue = new AsyncQueue();
 
-const promise1 = (async () => {
-  for (const value of values) {
-    await sleep(1000); // Assuming to do something asynchronous
-    queue.push(value);
-  }
-  queue.done();
-})();
+// Create a read stream and listen for data chunks
+fs.createReadStream("file.txt")
+  .on("data", (chunk) => {
+    queue.push(chunk); // Add the chunk to the queue
+  })
+  .on("end", () => {
+    queue.done(); // Signal that no more chunks will be added
+  })
+  .on("error", (error) => {
+    console.error("An error occurred while reading the file:", error);
+  });
 
-const promise2 = Promise.all(
-  Array.from({ length: 3 }).map(async () => {
-    for await (const value of queue) {
-      await sleep(1000); // Assuming to do something asynchronous
-      result.push(value);
+// Consume values from the queue
+for await (const value of queue) {
+  console.log(value);
+}
+```
+
+### Example 3: Multiple Consumers
+
+This is useful for limiting the number of concurrent operations, such as network requests.
+
+```typescript
+// Assume `Task` and `TaskResult` are types defined elsewhere in your code
+const queue = new AsyncQueue<Task>(tasks);
+
+const results: TaskResult[] = [];
+
+// Start 10 concurrent consumers using the competing-consumers pattern
+await Promise.all(
+  Array.from({ length: 10 }).map(async () => {
+    for await (const task of queue) {
+      try {
+        const result = await download(task); // Perform the task
+        results.push(result);
+      } catch (error) {
+        console.error("Task failed:", error);
+      }
     }
   })
 );
-
-await Promise.all([promise1, promise2]);
-```
-
-Output:
-
-```
-1
-2
-3
-4
-5
 ```
 
 ## License

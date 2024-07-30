@@ -1,89 +1,95 @@
-# AsyncQueue
+# 异步队列（AsyncQueue）
 
-AsyncQueue 是一个提供简单异步队列实现的 TypeScript 类。它实现了`Symbol.asyncIterator`接口，因此可以在`for-await-of`循环中使用。它允许将项目推入队列，并使用异步迭代器由一个或多个消费者消耗。
+AsyncQueue 是一个 TypeScript 类，提供了一个简单的异步队列实现。它实现了 `Symbol.asyncIterator` 接口，允许其在 `for-await-of` 循环中使用。这使得一个或多个消费者可以异步地处理队列中的项目。
 
 ## 安装
+
+使用 npm 安装 AsyncQueue：
 
 ```
 npm install @ai-zen/async-queue
 ```
 
-## 使用
+## 使用说明
 
-### 导入
+### 引入
 
-```javascript
+```typescript
 import AsyncQueue from "@ai-zen/async-queue";
 ```
 
 ### 创建 AsyncQueue 实例
 
-```javascript
-const queue = new AsyncQueue();
+```typescript
+const queue = new AsyncQueue([1, 2, 3]);
 ```
 
-### 推入值到队列中
+### 向队列中添加值
 
-```javascript
+```typescript
 queue.push(value);
+
+// 或者
+queue.push(value1, value2, value3, ...);
+
+// 或者
+queue.push(...values);
 ```
 
-`push`方法将一个值添加到队列中。它会增加队列的大小 1。
+`push` 方法用于向队列中添加一个或多个值，并增加队列的大小。
 
-### 将队列标记为完成
+### 标记队列完成
 
-```javascript
+```typescript
 queue.done();
 ```
 
-`done`方法将队列标记为完成。这意味着将不再向队列中推入任何项目。
+`done` 方法用于标记队列已完成。这表明不会有更多的项目被添加到队列中。
 
 ### 遍历队列
 
-```javascript
+```typescript
 for await (const value of queue) {
-  // 消费值
+  // 使用该值
 }
 ```
 
-`for await...of`循环可以用来遍历队列中的项目。这个循环是异步的，这意味着它将在使用每个值之前等待其可用。
+可以使用 `for await...of` 循环来遍历队列中的项目。这个循环是异步的，并且会在消费每个值之前等待其可用。
 
 ### 获取队列的大小
 
-```javascript
+```typescript
 const size = queue.size;
 ```
 
-`size`属性返回队列的当前大小。
+`size` 属性返回队列的当前大小。
 
 ## 示例
 
 ### 示例 1：单个消费者
 
-```javascript
-const queue = new AsyncQueue<number>();
-const values = [1, 2, 3, 4, 5];
-const result: number[] = [];
+你可以一边添加数据，一边消费数据。
 
-const promise1 = (async () => {
-  for (const value of values) {
-    await sleep(1000); // Assuming to do something asynchronous
+```typescript
+const queue = new AsyncQueue();
+
+(async () => {
+  for (const value of [1, 2, 3, 4, 5]) {
+    await sleep(1); // 模拟异步操作
     queue.push(value);
   }
   queue.done();
 })();
 
-const promise2 = (async () => {
-  for await (const value of queue) {
-    await sleep(1000); // Assuming to do something asynchronous
-    result.push(value);
-  }
-})();
+for await (const value of queue) {
+  await sleep(1); // 模拟异步操作
+  console.log(value);
+}
 
-await Promise.all([promise1, promise2]);
+console.log("Done!");
 ```
 
-输出：
+输出:
 
 ```
 1
@@ -91,47 +97,59 @@ await Promise.all([promise1, promise2]);
 3
 4
 5
+Done!
 ```
 
-### 示例 2：多个消费者
+### 示例 2:
 
-这对于限制并发请求的数量非常有用，就像一个简单的线程池一样。
+轻松将传统流转换为异步迭代器。
 
-```javascript
-const queue = new AsyncQueue<number>();
-const values = [1, 2, 3, 4, 5];
-const result: number[] = [];
+```typescript
+const queue = new AsyncQueue();
 
-const promise1 = (async () => {
-  for (const value of values) {
-    await sleep(1000); // Assuming to do something asynchronous
-    queue.push(value);
-  }
-  queue.done();
-})();
+// 创建一个可读流并监听数据块
+fs.createReadStream("file.txt")
+  .on("data", (chunk) => {
+    queue.push(chunk); // 将数据块添加到队列
+  })
+  .on("end", () => {
+    queue.done(); // 表示没有更多的数据块将被添加
+  })
+  .on("error", (error) => {
+    console.error("读取文件时发生错误:", error);
+  });
 
-const promise2 = Promise.all(
-  Array.from({ length: 3 }).map(async () => {
-    for await (const value of queue) {
-      await sleep(1000); // Assuming to do something asynchronous
-      result.push(value);
+// 从队列中消费值
+for await (const value of queue) {
+  console.log(value);
+}
+```
+
+### 示例 3：多个消费者
+
+这对于限制并发操作的数量（如网络请求）非常有用。
+
+```typescript
+// 假设 `Task` 和 `TaskResult` 是代码其他地方定义的类型
+const queue = new AsyncQueue<Task>(tasks);
+
+const results: TaskResult[] = [];
+
+// 使用竞争消费者模式启动 10 个并发消费者
+await Promise.all(
+  Array.from({ length: 10 }).map(async () => {
+    for await (const task of queue) {
+      try {
+        const result = await download(task); // 执行任务
+        results.push(result);
+      } catch (error) {
+        console.error("任务失败:", error);
+      }
     }
   })
 );
-
-await Promise.all([promise1, promise2]);
-```
-
-输出：
-
-```
-1
-2
-3
-4
-5
 ```
 
 ## 许可证
 
-该软件包根据 MIT 许可证进行许可。
+此软件包在 MIT 许可证下发布。

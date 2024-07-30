@@ -6,14 +6,23 @@ const sleep = (ms: number) =>
   });
 
 describe("AsyncQueue", () => {
+  test("constructor", () => {
+    const queue = new AsyncQueue([1, 2, 3]);
+
+    expect(queue.size).toBe(3);
+  });
+
   test("push should add value to the queue and increase size", () => {
     const queue = new AsyncQueue<number>();
 
     queue.push(1);
     expect(queue.size).toBe(1);
 
-    queue.push(2);
-    expect(queue.size).toBe(2);
+    queue.push(2, 3);
+    expect(queue.size).toBe(3);
+
+    queue.push(4, 5, 6);
+    expect(queue.size).toBe(6);
   });
 
   test("done should mark the queue as done", () => {
@@ -24,44 +33,38 @@ describe("AsyncQueue", () => {
   });
 
   test("asyncIterator should iterate over the data queue", async () => {
-    const queue = new AsyncQueue<number>();
-    const values = [1, 2, 3, 4, 5];
+    const queue = new AsyncQueue([1, 2, 3]);
     const result: number[] = [];
 
-    const promise1 = (async () => {
-      for (const value of values) {
+    (async () => {
+      for (const value of [4, 5, 6]) {
         await sleep(1);
         queue.push(value);
       }
       queue.done();
     })();
 
-    const promise2 = (async () => {
-      for await (const value of queue) {
-        await sleep(1);
-        result.push(value);
-      }
-    })();
+    for await (const value of queue) {
+      await sleep(1);
+      result.push(value);
+    }
 
-    await Promise.all([promise1, promise2]);
-
-    expect(result).toEqual(values);
+    expect(result).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   test("asyncIterator should allow multiple consumers", async () => {
-    const queue = new AsyncQueue<number>();
-    const values = [1, 2, 3, 4, 5];
+    const queue = new AsyncQueue([1, 2, 3]);
     const result: number[] = [];
 
-    const promise1 = (async () => {
-      for (const value of values) {
+    (async () => {
+      for (const value of [4, 5, 6]) {
         await sleep(1);
         queue.push(value);
       }
       queue.done();
     })();
 
-    const promise2 = Promise.all(
+    await Promise.all(
       Array.from({ length: 3 }).map(async () => {
         for await (const value of queue) {
           await sleep(1);
@@ -70,8 +73,6 @@ describe("AsyncQueue", () => {
       })
     );
 
-    await Promise.all([promise1, promise2]);
-
-    expect(result).toEqual(values);
+    expect(result).toEqual([1, 2, 3, 4, 5, 6]);
   });
 });
