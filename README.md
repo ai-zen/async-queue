@@ -100,32 +100,7 @@ Output:
 Done!
 ```
 
-### Example 2:
-
-Easily convert traditional streams into asynchronous iterators.
-
-```typescript
-const queue = new AsyncQueue();
-
-// Create a read stream and listen for data chunks
-fs.createReadStream("file.txt")
-  .on("data", (chunk) => {
-    queue.push(chunk); // Add the chunk to the queue
-  })
-  .on("end", () => {
-    queue.done(); // Signal that no more chunks will be added
-  })
-  .on("error", (error) => {
-    console.error("An error occurred while reading the file:", error);
-  });
-
-// Consume values from the queue
-for await (const value of queue) {
-  console.log(value);
-}
-```
-
-### Example 3: Multiple Consumers
+### Example 2: Multiple Consumers
 
 This is useful for limiting the number of concurrent operations, such as network requests.
 

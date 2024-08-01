@@ -100,32 +100,7 @@ console.log("Done!");
 Done!
 ```
 
-### 示例 2:
-
-轻松将传统流转换为异步迭代器。
-
-```typescript
-const queue = new AsyncQueue();
-
-// 创建一个可读流并监听数据块
-fs.createReadStream("file.txt")
-  .on("data", (chunk) => {
-    queue.push(chunk); // 将数据块添加到队列
-  })
-  .on("end", () => {
-    queue.done(); // 表示没有更多的数据块将被添加
-  })
-  .on("error", (error) => {
-    console.error("读取文件时发生错误:", error);
-  });
-
-// 从队列中消费值
-for await (const value of queue) {
-  console.log(value);
-}
-```
-
-### 示例 3：多个消费者
+### 示例 2：多个消费者
 
 这对于限制并发操作的数量（如网络请求）非常有用。
 
