@@ -1,6 +1,6 @@
 {
   "name": "@ai-zen/async-queue",
-  "version": "1.2.2",
+  "version": "1.3.1",
   "description": "AsyncQueue is a TypeScript class that provides a simple asynchronous queue implementation. It implements the `Symbol.asyncIterator` interface, allowing it to be used in `for-await-of` loops. This enables one or multiple consumers to process items in the queue asynchronously.",
   "keywords": [
     "async",

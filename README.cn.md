@@ -108,6 +108,8 @@ Done!
 // 假设 `Task` 和 `TaskResult` 是代码其他地方定义的类型
 const queue = new AsyncQueue<Task>(tasks);
 
+queue.done();
+
 const results: TaskResult[] = [];
 
 // 使用竞争消费者模式启动 10 个并发消费者
@@ -123,6 +125,28 @@ await Promise.all(
     }
   })
 );
+```
+
+### 示例 3：背压控制
+
+该库提供了一个极其简单的背压控制机制，可以防止队列长度超过阈值。只需要在 `push` 之前调用并等待 `backpressure` 方法即可。如果队列达到阈值，则 `backpressure` 方法将进行等待，直到队列长度减少到有空间为止。
+
+```typescript
+const queue = new AsyncQueue<number>();
+const result: number[] = [];
+
+(async () => {
+  for (const value of Array.from({ length: 100 }).map((_, i) => i)) {
+    await queue.backpressure(10); // 如果队列长度大于或等于 10，则等待队列长度减少到有空间为止
+    queue.push(value);
+  }
+  queue.done();
+})();
+
+for await (const value of queue) {
+  await sleep(1000); // 模拟异步操作
+  result.push(value);
+}
 ```
 
 ## 许可证

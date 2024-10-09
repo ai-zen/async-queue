@@ -1,8 +1,14 @@
+import { LinkedQueue } from "./LinkedQueue.js";
+
 export default class AsyncQueue<T> {
-  private queue: T[] = [];
-  private resolve?: () => void = undefined;
-  private promise?: Promise<unknown> = new Promise<void>(
-    (resolve) => (this.resolve = resolve)
+  private queue: LinkedQueue<T> = new LinkedQueue<T>();
+  private pushTx?: () => void = undefined;
+  private pushRx?: Promise<void> = new Promise<void>(
+    (resolve) => (this.pushTx = resolve)
+  );
+  private shiftTx?: () => void = undefined;
+  private shiftRx?: Promise<void> = new Promise<void>(
+    (resolve) => (this.shiftTx = resolve)
   );
   isDone: boolean = false;
 
@@ -14,28 +20,41 @@ export default class AsyncQueue<T> {
 
   public async *[Symbol.asyncIterator]() {
     while (true) {
-      if (this.queue.length) {
-        yield this.queue.shift()!;
+      if (this.queue.size) {
+        yield this.shift()!;
       } else if (this.isDone) {
         break;
       } else {
-        await this.promise;
+        await this.pushRx;
       }
     }
   }
 
+  public shift() {
+    const value = this.queue.shift();
+    this.shiftTx?.();
+    this.shiftRx = new Promise<void>((tx) => (this.shiftTx = tx));
+    return value;
+  }
+
   public push(...values: T[]) {
     this.queue.push(...values);
-    this.resolve?.();
-    this.promise = new Promise<void>((resolve) => (this.resolve = resolve));
+    this.pushTx?.();
+    this.pushRx = new Promise<void>((tx) => (this.pushTx = tx));
   }
 
   public done() {
     this.isDone = true;
-    this.resolve?.();
+    this.pushTx?.();
   }
 
   public get size() {
-    return this.queue.length;
+    return this.queue.size;
+  }
+
+  public async backpressure(max: number) {
+    while (this.size >= max) {
+      await this.shiftRx;
+    }
   }
 }

@@ -108,6 +108,8 @@ This is useful for limiting the number of concurrent operations, such as network
 // Assume `Task` and `TaskResult` are types defined elsewhere in your code
 const queue = new AsyncQueue<Task>(tasks);
 
+queue.done();
+
 const results: TaskResult[] = [];
 
 // Start 10 concurrent consumers using the competing-consumers pattern
@@ -123,6 +125,28 @@ await Promise.all(
     }
   })
 );
+```
+
+### Example 3: Backpressure
+
+The library provides a very simple backpressure control mechanism that can prevent the queue length from exceeding a threshold. Just call and wait for the `backpressure` method before `push`. If the queue reaches the threshold, the `backpressure` method will wait until the queue length decreases to have space.
+
+```typescript
+const queue = new AsyncQueue<number>();
+const result: number[] = [];
+
+(async () => {
+  for (const value of Array.from({ length: 100 }).map((_, i) => i)) {
+    await queue.backpressure(10); // Wait for the queue to have space, the maximum size is 10
+    queue.push(value);
+  }
+  queue.done();
+})();
+
+for await (const value of queue) {
+  await sleep(1000); // Simulate asynchronous operations
+  result.push(value);
+}
 ```
 
 ## License

@@ -75,4 +75,27 @@ describe("AsyncQueue", () => {
 
     expect(result).toEqual([1, 2, 3, 4, 5, 6]);
   });
+
+  test("backpressure should work", async () => {
+    const queue = new AsyncQueue<number>();
+    const result: number[] = [];
+
+    (async () => {
+      for (const value of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+        await sleep(1);
+        await queue.backpressure(4); // wait for the queue to have space
+        expect(queue.size).toBeLessThanOrEqual(3);
+        queue.push(value);
+        expect(queue.size).toBeLessThanOrEqual(4);
+      }
+      queue.done();
+    })();
+
+    for await (const value of queue) {
+      await sleep(10);
+      result.push(value);
+    }
+
+    expect(result).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
 });
