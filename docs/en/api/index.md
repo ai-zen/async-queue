@@ -1,6 +1,6 @@
 ---
 title: API Reference
-description: Public API reference for AsyncQueue: constructor, push, shift, done, size, backpressure, isDone, and Symbol.asyncIterator.
+description: Public API reference for AsyncQueue: constructor, push, shift, takeAll, asTakeAll, done, size, backpressure, isDone, and Symbol.asyncIterator.
 outline: deep
 ---
 
@@ -38,6 +38,29 @@ queue.push(...values);
 
 ```ts
 const a = queue.shift();
+```
+
+## `queue.takeAll(filterCallback?)`
+
+- Type: `takeAll(filterCallback?: (value: T) => boolean): T[]`
+- Description: **Synchronous, never waits.** Removes and returns, in their original order, every element that matches right now. Elements that do not match stay in the queue and keep their order; if nothing matches it returns an empty array. Without a callback it takes everything. Like `shift()`, it releases `backpressure()` waiters.
+- Example:
+
+```ts
+const all = queue.takeAll();
+const high = queue.takeAll((item) => item.priority === "high");
+```
+
+## `queue.asTakeAll()`
+
+- Type: `asTakeAll(): AsyncGenerator<T[], void, unknown>`
+- Description: The waiting view of `takeAll()`. Hangs while the queue is empty; takes everything in one go and yields that batch once something is there; **never yields an empty array**; after `done()` it drains whatever is left and then ends. Only one iterator should be alive at a time (two of them would swallow each other's values).
+- Example:
+
+```ts
+for await (const batch of queue.asTakeAll()) {
+  // batch is never empty
+}
 ```
 
 ## `queue.done()`
@@ -95,6 +118,6 @@ for await (const value of queue) {
 
 ## Notes
 
-- Type definitions are located in `dist/esm/index.d.ts`.
+- Type definitions are located in `dist/index.d.ts`.
 - Source code is in `src/AsyncQueue.ts` and `src/LinkedQueue.ts` in the repository (see source for verification).
 - If you have questions about certain behaviors (such as `shift()` returning on an empty queue, or the waiting semantics of `backpressure`), please refer to the implementation in `src/`.

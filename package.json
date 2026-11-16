@@ -1,6 +1,6 @@
 {
   "name": "@ai-zen/async-queue",
-  "version": "1.3.2",
+  "version": "1.5.0",
   "description": "AsyncQueue is a TypeScript class that provides a simple asynchronous queue implementation. It implements the `Symbol.asyncIterator` interface, allowing it to be used in `for-await-of` loops. This enables one or multiple consumers to process items in the queue asynchronously.",
   "keywords": [
     "async",
@@ -13,24 +13,24 @@
     "concurrent",
     "competing-consumers pattern"
   ],
-  "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.js",
-  "types": "dist/esm/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js",
-      "types": "./dist/esm/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {
     "clean": "rimraf ./dist",
     "prebuild": "npm run clean",
-    "build:cjs": "tsc -p tsconfig.cjs.json",
-    "build:esm": "tsc -p tsconfig.esm.json",
-    "build": "npm run build:cjs && npm run build:esm",
+    "build": "rolldown -c rolldown.config.ts && tsc -p tsconfig.json --emitDeclarationOnly",
     "prepublishOnly": "npm run build",
-    "test": "npm run build && cross-env NODE_OPTIONS=--experimental-vm-modules jest"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "author": "LZQCN",
   "license": "MIT",
@@ -42,13 +42,14 @@
     "url": "https://github.com/ai-zen/async-queue/issues"
   },
   "homepage": "https://github.com/ai-zen/async-queue",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
-    "@jest/globals": "^29",
-    "@types/jest": "^29",
     "@types/node": "^20.14.11",
-    "cross-env": "^7.0.3",
-    "jest": "^29",
-    "rimraf": "^5.0.5",
-    "typescript": "^5.3.3"
+    "rimraf": "^6.0.0",
+    "rolldown": "^1.1.4",
+    "typescript": "^5.3.3",
+    "vitest": "^4.1.9"
   }
 }

@@ -64,6 +64,26 @@ const size = queue.size;
 
 `size` 属性返回队列的当前大小。
 
+
+### 一次全部取出
+
+```typescript
+// 同步：取干此刻队列里所有（或所有匹配的）元素
+const all = queue.takeAll();
+const high = queue.takeAll((item) => item.priority === "high");
+
+// 异步：等到有货，然后一次取干这一批
+for await (const batch of queue.asTakeAll()) {
+  // batch 永远不是空数组
+}
+```
+
+`takeAll(filterCallback?)` 不等待。不匹配的元素留在队列里、顺序不变；一条都不匹配就返回空数组。
+
+`asTakeAll()` 是等待版：队列空时挂起，有货时一次取干，永不吐空数组，`done()` 之后把剩下的吐完再结束。
+
+两个只用其一：它们是同一个问题的两种问法（「此刻有什么」和「有货了叫我」）。
+
 ## 示例
 
 ### 示例 1：单个消费者

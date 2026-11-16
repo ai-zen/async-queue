@@ -48,4 +48,38 @@ export class LinkedQueue<T> {
     this._size--;
     return value;
   }
+
+  /**
+   * 从中间摘：摘掉所有匹配的节点，**其余保持原顺序**。
+   *
+   * 只有 push / shift 的时候，「取走一部分、剩下的不动」只能靠「全部 shift 出来再 push 回去」，
+   * 那是两趟，而且顺序得调用方自己记。这里直接改链表指针，一趟就是。
+   *
+   * @returns 被摘掉的值，按它们原来的先后顺序
+   */
+  takeWhere(predicate: (value: T) => boolean): T[] {
+    const taken: T[] = [];
+    let prev: LinkNode<T> | null = null;
+    let node = this.head;
+
+    while (node) {
+      const next = node.next;
+
+      if (predicate(node.value)) {
+        taken.push(node.value);
+        if (prev) prev.next = next;
+        else this.head = next;
+        // 摘掉的若是尾节点，tail 得一起退 —— 否则它指着已摘下来的节点，下一次 push 会接到它后面
+        if (node === this.tail) this.tail = prev;
+        node.next = null;
+        this._size--;
+      } else {
+        prev = node;
+      }
+
+      node = next;
+    }
+
+    return taken;
+  }
 }

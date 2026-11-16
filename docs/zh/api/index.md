@@ -1,6 +1,6 @@
 ---
 title: API 参考
-description: AsyncQueue 的公开 API 说明：构造、push、shift、done、size、backpressure、isDone 与 Symbol.asyncIterator。
+description: AsyncQueue 的公开 API 说明：构造、push、shift、takeAll、asTakeAll、done、size、backpressure、isDone 与 Symbol.asyncIterator。
 outline: deep
 ---
 
@@ -38,6 +38,29 @@ queue.push(...values);
 
 ```ts
 const a = queue.shift();
+```
+
+## `queue.takeAll(filterCallback?)`
+
+- 类型：`takeAll(filterCallback?: (value: T) => boolean): T[]`
+- 说明：**同步、不等待**，取走此刻队列里所有匹配的元素并按原顺序返回。不匹配的元素留在队列里、顺序不变；一条都不匹配就返回空数组。不传回调则取干全部。与 `shift()` 一样会放行 `backpressure()` 的等待者。
+- 示例：
+
+```ts
+const all = queue.takeAll();
+const high = queue.takeAll((item) => item.priority === "high");
+```
+
+## `queue.asTakeAll()`
+
+- 类型：`asTakeAll(): AsyncGenerator<T[], void, unknown>`
+- 说明：`takeAll()` 的等待版视图。队列空时挂起；有货时**一次取干**并产出一批；**永不产出空数组**；`done()` 之后把剩下的吐完再结束。同一时刻只该有一个迭代器活着（多个迭代器会互相吞值）。
+- 示例：
+
+```ts
+for await (const batch of queue.asTakeAll()) {
+  // batch 一定非空
+}
 ```
 
 ## `queue.done()`
@@ -95,6 +118,6 @@ for await (const value of queue) {
 
 ## 说明
 
-- 类型定义位于 `dist/esm/index.d.ts`。
+- 类型定义位于 `dist/index.d.ts`。
 - 源码见仓库内 `src/AsyncQueue.ts` 与 `src/LinkedQueue.ts`（见源码核实）。
 - 若对某些行为（如 `shift()` 空队时的返回、`backpressure` 的等待语义）有疑问，请以 `src/` 下实现为准。

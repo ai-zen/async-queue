@@ -64,6 +64,26 @@ const size = queue.size;
 
 The `size` property returns the current size of the queue.
 
+
+### Taking Everything at Once
+
+```typescript
+// Synchronous: take everything (or everything matching) that is there right now.
+const all = queue.takeAll();
+const high = queue.takeAll((item) => item.priority === "high");
+
+// Asynchronous: wait until there is something, then take that whole batch.
+for await (const batch of queue.asTakeAll()) {
+  // batch is never empty
+}
+```
+
+`takeAll(filterCallback?)` never waits. Items that do not match stay in the queue and keep their order; if nothing matches it returns an empty array.
+
+`asTakeAll()` is the waiting version: it hangs while the queue is empty, takes everything in one go when something arrives, never yields an empty array, and drains whatever is left before it ends after `done()`.
+
+Use one or the other, not both: they are two ways of asking the same question ("what is there now?" vs "wake me when there is something").
+
 ## Examples
 
 ### Example 1: Single Consumer
