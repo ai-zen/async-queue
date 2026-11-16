@@ -84,6 +84,15 @@ for await (const batch of queue.asTakeAll()) {
 
 Use one or the other, not both: they are two ways of asking the same question ("what is there now?" vs "wake me when there is something").
 
+
+### Peeking Without Taking
+
+```typescript
+const items = queue.snapshot(); // copy, in order; the queue is untouched
+```
+
+`snapshot()` answers "what is in there right now" without consuming anything. Use it whenever you build anything on top of the queue's change notifications: a notification can be missed, a re-read cannot.
+
 ## Examples
 
 ### Example 1: Single Consumer

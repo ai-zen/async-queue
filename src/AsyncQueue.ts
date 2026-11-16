@@ -104,4 +104,17 @@ export default class AsyncQueue<T> {
       await this.pushRx;
     }
   }
+
+  /**
+   * 看一眼：按原顺序把**此刻**队列里的元素抄成数组，**一个都不取走**。
+   *
+   * 存在的理由：`inboxAdded` / `inboxCleared` 这类事件是「通知」，不是唯一信息源。
+   * 只靠它们自建镜像的话，丢一条就与真队列永久分叉 —— 而且没法重读自愈。
+   * 有了本方法，「事件 + 随时重读」才真的够用。
+   *
+   * 返回的数组是拷贝，元素本身还是那一个（不会过期）。
+   */
+  public snapshot(): T[] {
+    return this.queue.toArray();
+  }
 }

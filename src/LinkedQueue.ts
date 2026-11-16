@@ -82,4 +82,15 @@ export class LinkedQueue<T> {
 
     return taken;
   }
+
+  /**
+   * 看一眼：按原顺序把当前所有值抄成数组，**不动队列**。
+   *
+   * 与 `takeWhere` 的区别是「读」与「取走」：这个是只读快照，队列一个都不少。
+   */
+  toArray(): T[] {
+    const values: T[] = [];
+    for (let node = this.head; node; node = node.next) values.push(node.value);
+    return values;
+  }
 }

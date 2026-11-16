@@ -63,6 +63,16 @@ for await (const batch of queue.asTakeAll()) {
 }
 ```
 
+## `queue.snapshot()`
+
+- 类型：`snapshot(): T[]`
+- 说明：按原顺序把**此刻**队列里的元素抄成数组，**一个都不取走**。数组是拷贝，元素本身还是那一个（不会过期）。它是变更通知（`push` / `takeAll`）的诚实搭档：通知会丢，重读不会。
+- 示例：
+
+```ts
+const items = queue.snapshot();
+```
+
 ## `queue.done()`
 
 - 说明：标记队列为完成，设置 `isDone = true`，并唤醒等待中的消费者。消费循环会在队列排空后结束。之后不应再 `push` 新值。

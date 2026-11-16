@@ -63,6 +63,16 @@ for await (const batch of queue.asTakeAll()) {
 }
 ```
 
+## `queue.snapshot()`
+
+- Type: `snapshot(): T[]`
+- Description: Returns a copy of the current contents, in order, **without taking anything out**. The array is a copy; the elements themselves are the same objects, so they never go stale. This is the honest companion to change notifications (`push` / `takeAll`): a notification can be missed, a re-read cannot.
+- Example:
+
+```ts
+const items = queue.snapshot();
+```
+
 ## `queue.done()`
 
 - Description: Marks the queue as done, sets `isDone = true`, and wakes up waiting consumers. The consuming loop ends after the queue is drained. Do not `push` new values afterward.

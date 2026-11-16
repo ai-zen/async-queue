@@ -228,3 +228,42 @@ describe("AsyncQueue.asTakeAll", () => {
     await consumer;
   });
 });
+
+describe("AsyncQueue.snapshot", () => {
+  test("reads the whole queue in order without taking anything", () => {
+    const queue = new AsyncQueue([1, 2, 3]);
+
+    expect(queue.snapshot()).toEqual([1, 2, 3]);
+    expect(queue.size).toBe(3);
+    expect(queue.snapshot()).toEqual([1, 2, 3]);
+  });
+
+  test("returns a copy, not the live structure", () => {
+    const queue = new AsyncQueue([1]);
+    const snap = queue.snapshot();
+
+    snap.push(999);
+    queue.push(2);
+
+    expect(queue.snapshot()).toEqual([1, 2]);
+  });
+
+  test("reflects takeAll immediately", () => {
+    const queue = new AsyncQueue([1, 2, 3, 4]);
+
+    queue.takeAll((value) => value % 2 === 0);
+
+    expect(queue.snapshot()).toEqual([1, 3]);
+  });
+
+  test("is empty after done() once drained", async () => {
+    const queue = new AsyncQueue([1, 2]);
+    queue.done();
+
+    for await (const _batch of queue.asTakeAll()) {
+      // 取干
+    }
+
+    expect(queue.snapshot()).toEqual([]);
+  });
+});
