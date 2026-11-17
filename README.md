@@ -44,7 +44,10 @@ The `push` method adds one or more values to the queue, and increases its size.
 queue.done();
 ```
 
-The `done` method marks the queue as finished. This indicates that no more items will be added to the queue.
+The `done` method announces that no more items will ever be added. It is a *signal*, not a switch:
+
+- **It outranks the input gate**: `done()` sets `isDone` even while input is paused — `pauseInput()` only gates `push()`.
+- **It does not break the output gate**: while output is paused, consumers parked on the gate keep waiting — they are not woken, not ended, and take nothing. The backlog stays where it is; after `resumeOutput()` they drain it and only then end on `isDone`.
 
 ### Iterating Over the Queue
 
@@ -84,6 +87,8 @@ for await (const batch of queue.asTakeAll()) {
 
 Use one or the other, not both: they are two ways of asking the same question ("what is there now?" vs "wake me when there is something").
 
+`takeAll()` is a *take*, not a *clear*: while the output gate is closed (`pauseOutput()`) it returns `[]` and takes nothing, and `size` does not change — the items are only being held back, and they are still queued. To throw the backlog away use `clear()` (below), which is not a take and is not gated.
+
 
 ### Peeking Without Taking
 
@@ -92,6 +97,61 @@ const items = queue.snapshot(); // copy, in order; the queue is untouched
 ```
 
 `snapshot()` answers "what is in there right now" without consuming anything. Use it whenever you build anything on top of the queue's change notifications: a notification can be missed, a re-read cannot.
+
+### Pausing the Input
+
+```typescript
+queue.pauseInput();  // from now on push() throws QueueInputPausedError
+queue.isInputPaused; // true
+queue.resumeInput(); // push() works again
+```
+
+`pauseInput()` closes the input gate: every `push()` throws `QueueInputPausedError` and **nothing at all is enqueued** (a multi-value `push` is all-or-nothing — it does not silently drop values, and it does not buffer them behind your back). `resumeInput()` opens it again. `isInputPaused` reads the current state.
+
+This is "do not accept new items for now", not "do not hand items out for now": whatever is already in the queue stays takeable, and the input gate is independent of the output gate. Both calls are idempotent.
+
+### Pausing the Output
+
+```typescript
+queue.pauseOutput();   // takeAll() returns [], iterators park on the gate
+queue.push(1, 2, 3);   // still accepted and queued
+queue.isOutputPaused;  // true
+queue.resumeOutput();  // parked consumers take it all, in order
+```
+
+`pauseOutput()` closes the output gate: `takeAll()` returns `[]` without taking anything, and `for await` / `asTakeAll()` consumers park on the gate instead of taking items. `push()` keeps accepting and queuing as usual. `resumeOutput()` releases every parked consumer at once, and they continue in the original order. `isOutputPaused` reads the current state.
+
+Both calls are idempotent, and the two gates do not interfere: `pauseOutput()` never rejects a `push()`, `pauseInput()` never blocks a `takeAll()`.
+
+### Clearing the Queue
+
+```typescript
+const discarded = queue.clear(); // take everything out and throw it away
+```
+
+`clear()` **discards** the backlog: it removes every element and returns them in their original order. It is not a take, and the difference matters:
+
+- it ignores **both** gates — it works while input or output is paused;
+- it wakes **no** consumer — nobody gets an item, and parked iterators stay parked;
+- it does not touch `isDone` — the queue can still accept and hand out items afterwards.
+
+Clearing an empty queue returns `[]`. To take items out for use, keep using `takeAll()`: asking a take to do a clear's job is exactly how "cannot clear while paused" happens.
+
+### The `QueueInputPausedError` Class
+
+```typescript
+import AsyncQueue, { QueueInputPausedError } from "@ai-zen/async-queue";
+
+try {
+  queue.push(value);
+} catch (error) {
+  if (error instanceof QueueInputPausedError) {
+    // input is paused: the value was not enqueued; retry after resumeInput()
+  }
+}
+```
+
+`push()` throws `QueueInputPausedError` while the input gate is closed. It is exported by name so that a `catch` can tell two situations apart: "input is temporarily closed" (this error — wait for `resumeInput()`) and "the queue is finished" (`isDone` — nobody will ever take it).
 
 ## Examples
 
@@ -177,6 +237,28 @@ for await (const value of queue) {
   result.push(value);
 }
 ```
+
+### Example 4: Pausing the Output
+
+Deliveries keep being accepted while taking is paused; once taking resumes, they come out in the original order.
+
+```typescript
+const queue = new AsyncQueue<number>();
+
+queue.pauseOutput();          // stop taking
+queue.push(1, 2, 3);          // pushes are still accepted and queued
+console.log(queue.size);      // 3
+console.log(queue.takeAll()); // [] — the gate is closed, nothing is handed out
+
+queue.resumeOutput();         // release the gate
+
+for await (const value of queue) {
+  console.log(value); // 1, 2, 3
+  if (value === 3) queue.done();
+}
+```
+
+`clear()` is the way to throw that backlog away instead of taking it — and it works even while the gate is closed.
 
 ## License
 

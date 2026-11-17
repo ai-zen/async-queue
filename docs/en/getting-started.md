@@ -58,6 +58,32 @@ for await (const value of queue) {
 }
 ```
 
+## Pausing and Resuming
+
+Two independent, idempotent gates let you suspend one side without touching the other.
+
+**Input gate** — "not accepting for now": `push()` throws `QueueInputPausedError` and enqueues nothing; the items already in the queue stay takeable.
+
+```ts
+queue.pauseInput();
+queue.isInputPaused; // true
+// queue.push(1) -> throws QueueInputPausedError, nothing is enqueued
+queue.resumeInput(); // push() works again
+```
+
+**Output gate** — "not handing out for now": `takeAll()` returns `[]`, `for await` / `asTakeAll()` consumers park on the gate, while `push()` keeps accepting and queuing. `resumeOutput()` releases them all, and they continue in the original order.
+
+```ts
+queue.pauseOutput();
+queue.push(1, 2, 3);   // accepted and queued
+queue.takeAll();       // [] — the gate is closed
+queue.resumeOutput();  // parked consumers take 1, 2, 3
+```
+
+`done()` is a signal, not a switch: it sets `isDone` even while input is paused, but it does not break the output gate — parked consumers keep waiting and only end after `resumeOutput()`, once the backlog is drained.
+
+To discard the backlog instead of taking it, use `clear()`: it ignores both gates, wakes no consumer, leaves `isDone` alone, and returns the discarded items in their original order.
+
 ## Example 1: Single Consumer
 
 ```ts
@@ -131,6 +157,26 @@ const queue = new AsyncQueue<number>();
 for await (const value of queue) {
   await sleep(1000); // simulate async processing
   result.push(value);
+}
+```
+
+## Example 4: Pausing the Output
+
+Deliveries keep being accepted while taking is paused; once taking resumes, they come out in the original order.
+
+```ts
+const queue = new AsyncQueue<number>();
+
+queue.pauseOutput();          // stop taking
+queue.push(1, 2, 3);          // still accepted and queued
+console.log(queue.size);      // 3
+console.log(queue.takeAll()); // [] — nothing is handed out
+
+queue.resumeOutput();         // release the gate
+
+for await (const value of queue) {
+  console.log(value); // 1, 2, 3
+  if (value === 3) queue.done();
 }
 ```
 

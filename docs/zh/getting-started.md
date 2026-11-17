@@ -58,6 +58,32 @@ for await (const value of queue) {
 }
 ```
 
+## 暂停与恢复
+
+两道闸彼此独立、都幂等，可以只暂停一侧而不碰另一侧。
+
+**输入闸** —— 「暂不收」：`push()` 抛 `QueueInputPausedError`、一个都不入队；队列里已有的货照旧能取。
+
+```ts
+queue.pauseInput();
+queue.isInputPaused; // true
+// queue.push(1) -> 抛 QueueInputPausedError，没入队
+queue.resumeInput(); // push() 恢复正常
+```
+
+**输出闸** —— 「暂不取」：`takeAll()` 回 `[]`，`for await` / `asTakeAll()` 的消费者停在闸上等放行，而 `push()` 照收照排队。`resumeOutput()` 一次放行全体，它们按原顺序接着取。
+
+```ts
+queue.pauseOutput();
+queue.push(1, 2, 3);   // 照收照排队
+queue.takeAll();       // [] —— 闸关着
+queue.resumeOutput();  // 闸上的消费者按序取出 1、2、3
+```
+
+`done()` 是信号，不是开关：输入关着也照样置 `isDone`，但它不突破输出闸 —— 闸上的消费者继续等，`resumeOutput()` 取完存量之后才收尾。
+
+要把存量作废而不是取走，用 `clear()`：两道闸都不看、不唤醒任何消费者、不碰 `isDone`，并按原顺序返回被清掉的那些。
+
 ## 示例 1：单个消费者
 
 ```ts
@@ -131,6 +157,26 @@ const queue = new AsyncQueue<number>();
 for await (const value of queue) {
   await sleep(1000); // 模拟异步处理
   result.push(value);
+}
+```
+
+## 示例 4：暂停取件与恢复
+
+暂停取件期间投递照收，恢复取件后按原顺序取出。
+
+```ts
+const queue = new AsyncQueue<number>();
+
+queue.pauseOutput();          // 暂停取件
+queue.push(1, 2, 3);          // 投递照收、照排队
+console.log(queue.size);      // 3
+console.log(queue.takeAll()); // [] —— 一件都不给
+
+queue.resumeOutput();         // 放行
+
+for await (const value of queue) {
+  console.log(value); // 1、2、3
+  if (value === 3) queue.done();
 }
 ```
 

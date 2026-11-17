@@ -13,6 +13,7 @@ AsyncQueue 是一个 TypeScript 类，实现了 `Symbol.asyncIterator` 接口，
 - **异步迭代**：实现 `Symbol.asyncIterator`，可直接 `for await (const v of queue)`。
 - **多消费者 / 竞争消费者模式**：多个消费者可共享同一个队列，每个值只会被其中一个消费者拿到，天然支持并发限流。
 - **背压控制**：提供简易的 `backpressure(max)` 方法，可在入队前等待，避免队列长度超过阈值。
+- **输入 / 输出闸**：`pauseInput()` 让 `push()` 抛 `QueueInputPausedError`、一个都不入队；`pauseOutput()` 让消费者停在闸上等放行，而投递照收照排队、放行后按原顺序取出；`clear()` 作废存量，两道闸都拦不住它。两道闸幂等且互不影响。
 - **零依赖**：底层用自实现的链表（`LinkedQueue`）存储，无第三方运行时依赖。
 
 ## 环境要求
@@ -52,4 +53,4 @@ for await (const v of queue) {
 ## 参考
 
 - [快速开始](./getting-started.md) —— 安装、创建实例、单/多消费者示例、背压示例。
-- [API 参考](./api/index.md) —— `constructor`、`push`、`shift`、`done`、`size`、`backpressure` 等。
+- [API 参考](./api/index.md) —— `constructor`、`push`、`shift`、`takeAll`、`asTakeAll`、`snapshot`、`done`、`pauseInput` / `resumeInput` / `pauseOutput` / `resumeOutput`、`clear`、`size`、`backpressure`、`QueueInputPausedError` 等。

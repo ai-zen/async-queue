@@ -44,7 +44,10 @@ queue.push(...values);
 queue.done();
 ```
 
-`done` 方法用于标记队列已完成。这表明不会有更多的项目被添加到队列中。
+`done` 方法宣告「以后没有新货了」。它是个*信号*，不是开关：
+
+- **高于输入闸**：输入关着也照样置 `isDone` —— `pauseInput()` 只拦 `push()`。
+- **不突破输出闸**：输出关着时，停在闸上的消费者继续等 —— 不被唤醒、不退出、不取件，存量原样留在队列里；`resumeOutput()` 之后取完存量，才见 `isDone` 收尾。
 
 ### 遍历队列
 
@@ -84,6 +87,8 @@ for await (const batch of queue.asTakeAll()) {
 
 两个只用其一：它们是同一个问题的两种问法（「此刻有什么」和「有货了叫我」）。
 
+`takeAll()` 是*取件*，不是*清空*：输出闸关着（`pauseOutput()`）时它回 `[]`、一件都不取，`size` 也不变 —— 那只是「暂时不给」，货还排在队列里。要把存量作废请用 `clear()`（见下），它不看闸，也不是取件。
+
 
 ### 看一眼（不取走）
 
@@ -92,6 +97,61 @@ const items = queue.snapshot(); // 按顺序拷贝一份，队列一个都不少
 ```
 
 `snapshot()` 回答「此刻里面有什么」，且不消费任何东西。凡是要在队列的变更通知之上自己维护一份东西，都该用它兜底：通知会丢，重读不会。
+
+### 暂停输入
+
+```typescript
+queue.pauseInput();  // 此后 push() 抛 QueueInputPausedError
+queue.isInputPaused; // true
+queue.resumeInput(); // push() 恢复正常
+```
+
+`pauseInput()` 关上输入闸：此后每次 `push()` 都抛 `QueueInputPausedError`，**一个都不入队**（一次 push 多个值时要么全收、要么一个都不收 —— 不静默丢，也不在背后偷偷缓冲）。`resumeInput()` 重新打开。`isInputPaused` 读当前状态。
+
+这是「暂不收」，不是「暂不取」：队列里已有的货照旧能取，输入闸与输出闸互不影响。两个方法都幂等。
+
+### 暂停输出
+
+```typescript
+queue.pauseOutput();   // takeAll() 回 []，迭代器停在闸上
+queue.push(1, 2, 3);   // 照收照排队
+queue.isOutputPaused;  // true
+queue.resumeOutput();  // 放行，闸上的消费者按原顺序取走
+```
+
+`pauseOutput()` 关上输出闸：`takeAll()` 回 `[]`、一件都不取，`for await` / `asTakeAll()` 的消费者停在闸上等放行而不是取件。`push()` 照收照排队。`resumeOutput()` 一次放行所有停在闸上的消费者，它们按原顺序接着取。`isOutputPaused` 读当前状态。
+
+两个方法都幂等，两道闸也互不影响：`pauseOutput()` 不会让 `push()` 抛错，`pauseInput()` 也不会挡住 `takeAll()`。
+
+### 清空队列（作废）
+
+```typescript
+const discarded = queue.clear(); // 全部取出并丢弃
+```
+
+`clear()` 是**作废**：把队列里的货全部取出丢弃，按原顺序返回被清掉的那些。它不是取件，差别正在这三条：
+
+- **两道闸都不看** —— 输入关着、输出关着，都照样清得掉；
+- **不唤醒任何消费者** —— 没有货要交给谁，停在闸上的迭代器仍停在闸上；
+- **不碰 `isDone`** —— 清完队列照常能收能取。
+
+空队列清空回 `[]`。要「取出来用」还请继续用 `takeAll()`：拿取件去干作废的活，就会遇到「暂停中清不掉」。
+
+### `QueueInputPausedError` 错误类
+
+```typescript
+import AsyncQueue, { QueueInputPausedError } from "@ai-zen/async-queue";
+
+try {
+  queue.push(value);
+} catch (error) {
+  if (error instanceof QueueInputPausedError) {
+    // 输入关着：这个值没入队，等 resumeInput() 之后再送
+  }
+}
+```
+
+输入闸关着时 `push()` 抛的就是 `QueueInputPausedError`。之所以具名导出：`catch` 里得能分辨「输入暂时关了」（本错误 —— 等 `resumeInput()` 就能继续送）和「队列已经结束了」（看 `isDone` —— 再等也不会有人来取）。
 
 ## 示例
 
@@ -177,6 +237,28 @@ for await (const value of queue) {
   result.push(value);
 }
 ```
+
+### 示例 4：暂停取件与恢复
+
+暂停取件期间投递照收，恢复取件后按原顺序取出。
+
+```typescript
+const queue = new AsyncQueue<number>();
+
+queue.pauseOutput();          // 暂停取件
+queue.push(1, 2, 3);          // 投递照收、照排队
+console.log(queue.size);      // 3
+console.log(queue.takeAll()); // [] —— 闸关着，一件都不给
+
+queue.resumeOutput();         // 放行
+
+for await (const value of queue) {
+  console.log(value); // 1、2、3
+  if (value === 3) queue.done();
+}
+```
+
+要把这批存量直接作废（而不是取走），用 `clear()` —— 闸关着也清得掉。
 
 ## 许可证
 
