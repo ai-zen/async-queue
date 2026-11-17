@@ -260,6 +260,8 @@ for await (const value of queue) {
 
 要把这批存量直接作废（而不是取走），用 `clear()` —— 闸关着也清得掉。
 
+各版本变更记录见 [CHANGELOG.md](./CHANGELOG.md)。
+
 ## 许可证
 
 此软件包在 MIT 许可证下发布。

@@ -260,6 +260,8 @@ for await (const value of queue) {
 
 `clear()` is the way to throw that backlog away instead of taking it — and it works even while the gate is closed.
 
+See [CHANGELOG.md](./CHANGELOG.md) for release history.
+
 ## License
 
 This package is licensed under the MIT License.
